@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yiğit.io</title>
+    <style>
+        /* 1. ANA TASARIM */
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #0d0d0d;
+            color: white;
+            overflow: hidden;
+            transition: background 1s, color 0.5s;
+            cursor: none;
+        }
+
+        #bgCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        #custom-cursor {
+            position: fixed;
+            width: 22px;
+            height: 22px;
+            border: 2px solid white;
+            border-radius: 50%;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            z-index: 9999;
+            transition: transform 0.1s, border-color 0.3s;
+        }
+
+        /* 2. SOL PANEL (NOTLAR) */
+        .sidebar {
+            position: absolute;
+            left: 20px;
+            top: 20px;
+            bottom: 20px;
+            width: 260px;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(15px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #note-list {
+            flex-grow: 1;
+            overflow-y: auto;
+            font-size: 13px;
+        }
+
+        .note-item {
+            margin-bottom: 8px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            border-left: 3px solid;
+        }
+
+        /* 3. MERKEZ PANEL */
+        .main-panel {
+            position: relative;
+            z-index: 500;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 30px;
+            border-radius: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: center;
+            width: 380px;
+            box-shadow: 0 20px 80px rgba(0, 0, 0, 1);
+        }
+
+        .score-box {
+            font-size: 24px;
+            font-weight: bold;
+            padding: 10px;
+            border-radius: 15px;
+            margin-bottom: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* RENK SEÇİCİ ALANI */
+        .color-control {
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 10px;
+            border-radius: 12px;
+        }
+
+        #theme-color {
+            cursor: pointer;
+            border: none;
+            width: 30px;
+            height: 30px;
+            background: none;
+        }
+
+        .btn-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        button {
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            color: white;
+            background: rgba(255, 255, 255, 0.1);
+            transition: 0.3s;
+        }
+
+        button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
+        }
+
+        .yt-btn {
+            grid-column: span 2;
+            background: #ff0000;
+        }
+
+        .stop-btn {
+            grid-column: span 2;
+            background: #333;
+        }
+
+        #media-display {
+            margin-top: 15px;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #000;
+            min-height: 80px;
+            border: 1px solid #222;
+        }
+
+        iframe {
+            width: 100%;
+            height: 160px;
+            border: none;
+            display: none;
+        }
+
+        .input-box {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: none;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            outline: none;
+            box-sizing: border-box;
+            margin-top: 10px;
+            font-size: 12px;
+        }
+
+        .playing {
+            outline: 2px solid;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="custom-cursor"></div>
+    <canvas id="bgCanvas"></canvas>
+
+    <div class="sidebar">
+        <h3 id="sidebar-title">🌳 Not Ağacı</h3>
+        <div id="note-list"></div>
+        <input type="text" id="note-input" class="input-box" placeholder="Not bırak...">
+    </div>
+
+    <div class="main-panel">
+        <div class="score-box" id="score-display">SKOR: <span id="score">0</span></div>
+
+        <div class="color-control">
+            <span style="font-size: 12px; color: #aaa;">Tema Rengini Seç:</span>
+            <input type="color" id="theme-color" value="#f1c40f">
+        </div>
+
+        <div class="btn-grid">
+            <button onclick="playMood('happy', '#f1c40f', this)">Mutlu 😊</button>
+            <button onclick="playMood('sad', '#3498db', this)">Hüzünlü 😢</button>
+            <button onclick="playMood('energetic', '#e67e22', this)">Enerjik ⚡</button>
+            <button onclick="playMood('calm', '#2ecc71', this)">Sakin 🧘</button>
+            <button class="yt-btn" onclick="playUserArchive(this)">YouTube Arşivi 📺</button>
+            <button class="stop-btn" onclick="stopAll()">DURDUR 🛑</button>
+        </div>
+
+        <div id="media-display">
+            <p id="media-status" style="font-size: 11px; color: #555; padding: 20px;">Bir mod seç veya link ekle.</p>
+            <iframe id="video-player"></iframe>
+        </div>
+
+        <input type="text" id="song-input" class="input-box" placeholder="YouTube Linki Ekle + Enter">
+    </div>
+
+    <audio id="audio-engine"></audio>
+
+    <script>
+        const canvas = document.getElementById('bgCanvas');
+        const ctx = canvas.getContext('2d');
+        const audio = document.getElementById('audio-engine');
+        const video = document.getElementById('video-player');
+        const mediaStatus = document.getElementById('media-status');
+        const scoreEl = document.getElementById('score');
+        const cursor = document.getElementById('custom-cursor');
+        const themeColorPicker = document.getElementById('theme-color');
+
+        let particles = [];
+        let currentColor = '#f1c40f'; // Varsayılan renk
+        let score = 0;
+
+        // --- 🎨 RENK GÜNCELLEME SİSTEMİ ---
+        themeColorPicker.addEventListener('input', (e) => {
+            updateGlobalColor(e.target.value);
+        });
+
+        function updateGlobalColor(newColor) {
+            currentColor = newColor;
+            // İmleç rengini güncelle
+            cursor.style.borderColor = newColor;
+            // Başlık ve skor çerçeve rengini güncelle
+            document.getElementById('sidebar-title').style.color = newColor;
+            document.getElementById('score-display').style.borderColor = newColor;
+            // Arka planı çok hafif boya
+            document.body.style.background = `radial-gradient(circle, ${newColor}11 0%, #0d0d0d 100%)`;
+        }
+
+        // --- 🎵 MÜZİK SİSTEMİ ---
+        const tracks = {
+            happy: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+            sad: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3",
+            energetic: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
+            calm: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-15.mp3"
+        };
+
+        function universalPlay(url) {
+            stopAll(false);
+            mediaStatus.style.display = "none";
+            if (url.includes("youtube.com") || url.includes("youtu.be")) {
+                let vId = url.includes("v=") ? url.split("v=")[1].split("&")[0] : url.split("/").pop();
+                video.src = `https://www.youtube.com/embed/${vId}?autoplay=1`;
+                video.style.display = "block";
+            } else {
+                audio.src = url; audio.play();
+                video.style.display = "none";
+            }
+        }
+
+        function playMood(mood, color, btn) {
+            themeColorPicker.value = color;
+            updateGlobalColor(color);
+            document.querySelectorAll('button').forEach(b => { b.classList.remove('playing'); b.style.outlineColor = "transparent"; });
+            btn.classList.add('playing');
+            btn.style.outlineColor = color;
+            universalPlay(tracks[mood]);
+        }
+
+        function playUserArchive(btn) {
+            let archive = JSON.parse(localStorage.getItem('userPlaylist') || "[]");
+            if (archive.length === 0) return alert("Arşiv boş!");
+            playMood('user', currentColor, btn); // Mevcut rengi koru
+            universalPlay(archive[Math.floor(Math.random() * archive.length)]);
+        }
+
+        function stopAll(full = true) {
+            audio.pause(); audio.src = ""; video.src = ""; video.style.display = "none";
+            mediaStatus.style.display = "block";
+            if (full) {
+                document.querySelectorAll('button').forEach(b => b.classList.remove('playing'));
+                updateGlobalColor('#ffffff');
+            }
+        }
+
+        // --- 💬 NOT VE LİNK SİSTEMİ ---
+        document.getElementById('song-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && e.target.value.trim() !== "") {
+                let saved = JSON.parse(localStorage.getItem('userPlaylist') || "[]");
+                saved.push(e.target.value);
+                localStorage.setItem('userPlaylist', JSON.stringify(saved));
+                universalPlay(e.target.value);
+                e.target.value = "";
+            }
+        });
+
+        document.getElementById('note-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && e.target.value.trim() !== "") {
+                const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const text = e.target.value;
+                addNoteUI(time, text);
+                let notes = JSON.parse(localStorage.getItem('treeNotes') || "[]");
+                notes.unshift({ time, text });
+                localStorage.setItem('treeNotes', JSON.stringify(notes.slice(0, 50)));
+                e.target.value = "";
+            }
+        });
+
+        function addNoteUI(time, text) {
+            const div = document.createElement('div');
+            div.className = 'note-item';
+            div.style.borderLeftColor = currentColor;
+            div.innerHTML = `<b>Anonim • ${time}</b> ${text}`;
+            document.getElementById('note-list').prepend(div);
+        }
+
+        // --- 🌌 CANVAS VE OYUN ---
+        function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+        window.onresize = resize; resize();
+        window.addEventListener('mousemove', (e) => {
+            cursor.style.left = e.x + 'px'; cursor.style.top = e.y + 'px';
+            particles.forEach(p => { if (Math.sqrt((e.x - p.x) ** 2 + (e.y - p.y) ** 2) < 25) { score++; scoreEl.innerText = score; p.init(); } });
+        });
+        class Particle { constructor() { this.init(); } init() { this.x = Math.random() * canvas.width; this.y = Math.random() * canvas.height; this.size = Math.random() * 4 + 1; this.sx = Math.random() * 1 - 0.5; this.sy = Math.random() * 1 - 0.5; } update() { this.x += this.sx; this.y += this.sy; if (this.x < 0 || this.x > canvas.width) this.sx *= -1; if (this.y < 0 || this.y > canvas.height) this.sy *= -1; } draw() { ctx.fillStyle = currentColor + "99"; ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill(); } }
+        for (let i = 0; i < 80; i++) particles.push(new Particle());
+        function animate() { ctx.clearRect(0, 0, canvas.width, canvas.height); particles.forEach(p => { p.update(); p.draw(); }); requestAnimationFrame(animate); }
+        animate();
+
+        window.onload = () => {
+            let notes = JSON.parse(localStorage.getItem('treeNotes') || "[]");
+            notes.forEach(n => addNoteUI(n.time, n.text));
+            updateGlobalColor('#f1c40f');
+        };
+    </script>
+</body>
+
+</html>
